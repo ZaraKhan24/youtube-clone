@@ -20,6 +20,11 @@ function HomePage() {
     setIsSidebarOpen((prevState) => !prevState);
   };
 
+  // Close sidebar
+  const handleSidebarClose = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <div className="homepage">
 
@@ -29,7 +34,10 @@ function HomePage() {
       <div className="homepage-body">
 
         {/* Sidebar */}
-        <Sidebar isOpen={isSidebarOpen} />
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={handleSidebarClose}
+        />
 
         {/* Main Homepage Content */}
         <main className="main-content">
