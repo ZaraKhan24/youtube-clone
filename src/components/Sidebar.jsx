@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+//Sidebar.jsx
+import React, { useState, useEffect } from "react";
 import {
   House,
   PlaySquare,
@@ -19,6 +20,7 @@ import {
   Radio,
   Gamepad2,
   CircleUserRound,
+  X,
 } from "lucide-react";
 
 const subscriptions = [
@@ -85,14 +87,197 @@ const exploreLinks = [
   { name: "Gaming", icon: Gamepad2 },
 ];
 
-function Sidebar({ isOpen }) {
+function Sidebar({ isOpen, onClose }) {
   const [activeItem, setActiveItem] = useState("Home");
   const [showMoreYou, setShowMoreYou] = useState(false);
+
+  // Detect mobile screen
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth <= 768
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   const visiblePersonalLinks = showMoreYou
     ? personalLinks
     : personalLinks.slice(0, 7);
 
+  const handleItemClick = (name) => {
+    setActiveItem(name);
+
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
+  // Mobile Sidebar
+  if (isMobile) {
+    return (
+      <>
+        {isOpen && (
+          <div
+            className="sidebar-overlay"
+            onClick={onClose}
+          />
+        )}
+
+        <aside
+          className={`sidebar expanded mobile-sidebar ${
+            isOpen ? "mobile-open" : "mobile-closed"
+          }`}
+        >
+          <div className="mobile-sidebar-header">
+            <span>YouTube</span>
+
+            <button
+              type="button"
+              className="mobile-close-btn"
+              onClick={onClose}
+              aria-label="Close sidebar"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          {/* Main Navigation */}
+          <div className="sidebar-section">
+            {mainLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeItem === item.name;
+
+              return (
+                <button
+                  type="button"
+                  key={item.name}
+                  onClick={() => handleItemClick(item.name)}
+                  className={`sidebar-item ${
+                    isActive ? "active" : ""
+                  }`}
+                >
+                  <Icon size={22} />
+                  <span>{item.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Subscriptions */}
+          <div className="sidebar-section">
+            <div className="sidebar-heading">
+              <span>Subscriptions</span>
+              <ChevronRight size={18} />
+            </div>
+
+            {subscriptions.map((channel) => (
+              <button
+                type="button"
+                className="subscription-item"
+                key={channel.name}
+                onClick={() => handleItemClick(channel.name)}
+              >
+                <img
+                  src={channel.image}
+                  alt={channel.name}
+                  className="subscription-avatar"
+                />
+
+                <span className="subscription-name">
+                  {channel.name}
+                </span>
+
+                {channel.unread && (
+                  <span className="unread-dot"></span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* You Section */}
+          <div className="sidebar-section">
+            <div className="sidebar-heading">
+              <span>You</span>
+              <ChevronRight size={18} />
+            </div>
+
+            {visiblePersonalLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeItem === item.name;
+
+              return (
+                <button
+                  type="button"
+                  key={item.name}
+                  onClick={() => handleItemClick(item.name)}
+                  className={`sidebar-item ${
+                    isActive ? "active" : ""
+                  }`}
+                >
+                  <Icon size={22} />
+                  <span>{item.name}</span>
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              className="sidebar-item"
+              onClick={() =>
+                setShowMoreYou((prev) => !prev)
+              }
+            >
+              {showMoreYou ? (
+                <ChevronUp size={22} />
+              ) : (
+                <ChevronDown size={22} />
+              )}
+
+              <span>
+                {showMoreYou ? "Show less" : "Show more"}
+              </span>
+            </button>
+          </div>
+
+          {/* Explore Section */}
+          <div className="sidebar-section">
+            <div className="sidebar-heading">
+              <span>Explore</span>
+            </div>
+
+            {exploreLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeItem === item.name;
+
+              return (
+                <button
+                  type="button"
+                  key={item.name}
+                  onClick={() => handleItemClick(item.name)}
+                  className={`sidebar-item ${
+                    isActive ? "active" : ""
+                  }`}
+                >
+                  <Icon size={22} />
+                  <span>{item.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+      </>
+    );
+  }
+
+  // Desktop Collapsed Sidebar
   if (!isOpen) {
     return (
       <aside className="sidebar collapsed">
@@ -106,7 +291,9 @@ function Sidebar({ isOpen }) {
                 type="button"
                 key={item.name}
                 onClick={() => setActiveItem(item.name)}
-                className={`collapsed-item ${isActive ? "active" : ""}`}
+                className={`collapsed-item ${
+                  isActive ? "active" : ""
+                }`}
               >
                 <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
                 <span>{item.name}</span>
@@ -118,8 +305,10 @@ function Sidebar({ isOpen }) {
     );
   }
 
+  // Desktop Expanded Sidebar
   return (
     <aside className="sidebar expanded">
+
       {/* Main Navigation */}
       <div className="sidebar-section">
         {mainLinks.map((item) => {
@@ -131,7 +320,9 @@ function Sidebar({ isOpen }) {
               type="button"
               key={item.name}
               onClick={() => setActiveItem(item.name)}
-              className={`sidebar-item ${isActive ? "active" : ""}`}
+              className={`sidebar-item ${
+                isActive ? "active" : ""
+              }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
               <span>{item.name}</span>
@@ -144,7 +335,7 @@ function Sidebar({ isOpen }) {
       <div className="sidebar-section">
         <div className="sidebar-heading">
           <span>Subscriptions</span>
-          <ChevronRight size={18} strokeWidth={1.8} />
+          <ChevronRight size={18} />
         </div>
 
         {subscriptions.map((channel) => (
@@ -159,8 +350,14 @@ function Sidebar({ isOpen }) {
               alt={channel.name}
               className="subscription-avatar"
             />
-            <span className="subscription-name">{channel.name}</span>
-            {channel.unread && <span className="unread-dot"></span>}
+
+            <span className="subscription-name">
+              {channel.name}
+            </span>
+
+            {channel.unread && (
+              <span className="unread-dot"></span>
+            )}
           </button>
         ))}
       </div>
@@ -169,7 +366,7 @@ function Sidebar({ isOpen }) {
       <div className="sidebar-section">
         <div className="sidebar-heading">
           <span>You</span>
-          <ChevronRight size={18} strokeWidth={1.8} />
+          <ChevronRight size={18} />
         </div>
 
         {visiblePersonalLinks.map((item) => {
@@ -181,7 +378,9 @@ function Sidebar({ isOpen }) {
               type="button"
               key={item.name}
               onClick={() => setActiveItem(item.name)}
-              className={`sidebar-item ${isActive ? "active" : ""}`}
+              className={`sidebar-item ${
+                isActive ? "active" : ""
+              }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
               <span>{item.name}</span>
@@ -192,14 +391,19 @@ function Sidebar({ isOpen }) {
         <button
           type="button"
           className="sidebar-item"
-          onClick={() => setShowMoreYou((prev) => !prev)}
+          onClick={() =>
+            setShowMoreYou((prev) => !prev)
+          }
         >
           {showMoreYou ? (
-            <ChevronUp size={22} strokeWidth={1.8} />
+            <ChevronUp size={22} />
           ) : (
-            <ChevronDown size={22} strokeWidth={1.8} />
+            <ChevronDown size={22} />
           )}
-          <span>{showMoreYou ? "Show less" : "Show more"}</span>
+
+          <span>
+            {showMoreYou ? "Show less" : "Show more"}
+          </span>
         </button>
       </div>
 
@@ -218,7 +422,9 @@ function Sidebar({ isOpen }) {
               type="button"
               key={item.name}
               onClick={() => setActiveItem(item.name)}
-              className={`sidebar-item ${isActive ? "active" : ""}`}
+              className={`sidebar-item ${
+                isActive ? "active" : ""
+              }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
               <span>{item.name}</span>

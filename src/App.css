@@ -1,3 +1,4 @@
+
 /* =====================================
    MAIN HOMEPAGE
 ===================================== */
@@ -21,7 +22,6 @@
   width: 100%;
   min-height: calc(100vh - 56px);
 }
-
 
 /* =====================================
    NAVBAR
@@ -214,7 +214,6 @@
   flex-shrink: 0;
 }
 
-
 /* =====================================
    SIDEBAR
 ===================================== */
@@ -349,9 +348,8 @@
   flex-shrink: 0;
 }
 
-
 /* =====================================
-   MAIN CONTENT (AUTO-RESIZES WITH SIDEBAR)
+   MAIN CONTENT
 ===================================== */
 
 .main-content {
@@ -361,7 +359,6 @@
   overflow-x: clip;
   transition: padding 0.2s ease;
 }
-
 
 /* =====================================
    CATEGORY BAR
@@ -433,7 +430,6 @@
   background: #eeeeee;
 }
 
-
 /* =====================================
    VIDEO GRID
 ===================================== */
@@ -445,7 +441,6 @@
   padding-top: 18px;
   align-items: start;
 }
-
 
 /* =====================================
    VIDEO CARD
@@ -524,7 +519,6 @@
   border-radius: 4px;
 }
 
-
 /* =====================================
    VIDEO DETAILS
 ===================================== */
@@ -555,7 +549,6 @@
   font-weight: 600;
   margin: 0 0 7px;
   color: #0f0f0f;
-
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -591,7 +584,6 @@
 .video-menu-button:hover {
   background: #eeeeee;
 }
-
 
 /* =====================================
    SPONSORED VIDEO
@@ -640,7 +632,6 @@
 .visit-button:hover {
   background: #e5e5e5;
 }
-
 
 /* =====================================
    RESPONSIVE DESIGN
@@ -722,10 +713,6 @@
     display: block;
   }
 
-  .sidebar {
-    display: none;
-  }
-
   .main-content {
     padding: 0 12px 25px;
   }
@@ -742,4 +729,85 @@
   .thumbnail-container {
     border-radius: 10px;
   }
+}
+
+/* =====================================
+   MOBILE SIDEBAR FIX
+===================================== */
+
+@media (max-width: 768px) {
+
+  .sidebar.mobile-sidebar {
+    display: block;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: min(260px, 85vw);
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+    padding: 12px;
+    background: #ffffff;
+    z-index: 1002;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.mobile-sidebar.mobile-open {
+    display: block;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .sidebar.mobile-sidebar.mobile-closed {
+    display: block;
+    transform: translateX(-100%);
+    pointer-events: none;
+  }
+
+  /* Dark Background Overlay */
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1001;
+  }
+
+  /* Mobile Sidebar Header */
+
+  .mobile-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 8px 14px;
+    margin-bottom: 4px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #0f0f0f;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .mobile-close-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #0f0f0f;
+    cursor: pointer;
+  }
+
+  .mobile-close-btn:hover {
+    background: #f2f2f2;
+  }
+
 }
