@@ -110,6 +110,10 @@ function HomePage() {
       <div className="homepage-body">
         {/* Sidebar */}
         <Sidebar isOpen={isSidebarOpen} onClose={handleSidebarClose} />
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={handleSidebarClose}
+        />
 
         {/* Main Homepage Content */}
         <main className="main-content">
