@@ -1,7 +1,18 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
+async function parseResponseSafe(res) {
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return { message: text || `Request failed (${res.status})` };
+  }
+}
 
 function LoginPage() {
   const [isSignup, setIsSignup] = useState(true);
@@ -28,7 +39,7 @@ function LoginPage() {
         body: JSON.stringify(bodyData),
       });
 
-      const data = await res.json();
+      const data = await parseResponseSafe(res);
 
       if (!res.ok) {
         setError(data.message || "Request failed");
@@ -37,8 +48,8 @@ function LoginPage() {
         localStorage.setItem("user", JSON.stringify(data.user));
         navigate("/");
       }
-    } catch {
-      setError("Backend server connect nahi ho raha (check port 5000)");
+    } catch (err) {
+      setError(err.message || "Backend server se connect nahi ho saka");
     } finally {
       setLoading(false);
     }
