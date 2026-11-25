@@ -49,7 +49,7 @@ function LoginPage() {
         navigate("/");
       }
     } catch (err) {
-      setError(err.message || "Backend server se connect nahi ho saka");
+      setError(err.message || "Can't connect to backend server");
     } finally {
       setLoading(false);
     }
