@@ -8,7 +8,18 @@ import VideoCard from "./components/VideoCard";
 import UploadModal from "./components/UploadModal";
 import VideoPlayerModal from "./components/VideoPlayerModal";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
+async function parseResponseSafe(res) {
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return { message: text || `Request failed (${res.status})` };
+  }
+}
 
 function HomePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -33,7 +44,7 @@ function HomePage() {
       setLoadingVideos(true);
       setFetchError("");
       const res = await fetch(`${API_URL}/api/videos`);
-      const data = await res.json();
+      const data = await parseResponseSafe(res);
       if (!res.ok) {
         throw new Error(data.message || "Failed to load videos");
       }
@@ -65,7 +76,7 @@ function HomePage() {
       body: formData,
     });
 
-    const data = await res.json();
+    const data = await parseResponseSafe(res);
     if (!res.ok) {
       throw new Error(data.message || "Upload failed");
     }
@@ -88,7 +99,7 @@ function HomePage() {
       headers,
     });
 
-    const data = await res.json();
+    const data = await parseResponseSafe(res);
     if (!res.ok) {
       throw new Error(data.message || "Failed to delete video");
     }
