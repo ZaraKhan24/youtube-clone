@@ -11,6 +11,27 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB limit
 });
 
+// Helper: Extract & verify Bearer token
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id || decoded.userId || decoded._id;
+    if (!userId) {
+      return res.status(401).json({ message: "Invalid token payload" });
+    }
+    req.user = { ...decoded, id: String(userId) };
+    next();
+  } catch {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
 // Helper: Cloudinary upload stream from buffer
 const uploadBufferToCloudinary = (buffer) => {
   return new Promise((resolve, reject) => {
@@ -28,6 +49,13 @@ const uploadBufferToCloudinary = (buffer) => {
   });
 };
 
+// Helper: Extract Cloudinary public_id from secure_url if available
+const getCloudinaryPublicId = (videoUrl) => {
+  if (!videoUrl || !videoUrl.includes("cloudinary.com")) return null;
+  const match = videoUrl.match(/\/upload\/(?:v\d+\/)?(.+?)\.[^/.]+$/);
+  return match ? match[1] : null;
+};
+
 // GET all videos (newest first)
 router.get("/", async (req, res) => {
   try {
@@ -38,8 +66,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST upload new video
-router.post("/", upload.single("video"), async (req, res) => {
+// POST upload new video (authenticated user only)
+router.post("/", authenticateToken, upload.single("video"), async (req, res) => {
   try {
     const { title, description } = req.body;
 
@@ -50,24 +78,10 @@ router.post("/", upload.single("video"), async (req, res) => {
       return res.status(400).json({ message: "Video title is required" });
     }
 
-    // Optional user info from Bearer token if logged in
-    let channelName = "Creator";
-    let uploadedBy = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      try {
-        const token = authHeader.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        uploadedBy = decoded.id;
-        if (decoded.name) channelName = decoded.name;
-      } catch {
-        // Ignore invalid/expired token and keep default channelName
-      }
-    }
+    const channelName = req.user.name || "Creator";
+    const uploadedBy = req.user.id;
 
     const cloudResult = await uploadBufferToCloudinary(req.file.buffer);
-
-    // Cloudinary automatically generates a jpg thumbnail for uploaded videos
     const autoThumbnail = cloudResult.secure_url.replace(/\.[^/.]+$/, ".jpg");
 
     const newVideo = await Video.create({
@@ -87,19 +101,22 @@ router.post("/", upload.single("video"), async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-// Helper: Extract Cloudinary public_id from secure_url if available
-const getCloudinaryPublicId = (videoUrl) => {
-  if (!videoUrl || !videoUrl.includes("cloudinary.com")) return null;
-  const match = videoUrl.match(/\/upload\/(?:v\d+\/)?(.+?)\.[^/.]+$/);
-  return match ? match[1] : null;
-};
 
-// DELETE video by ID from MongoDB & Cloudinary
-router.delete("/:id", async (req, res) => {
+// DELETE video by ID (owner only) from MongoDB & Cloudinary
+router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
+    }
+
+    const ownerId =
+      video.uploadedBy?._id || video.uploadedBy || video.user?._id || video.user || video.userId;
+
+    if (!ownerId || String(ownerId) !== String(req.user.id)) {
+      return res
+        .status(403)
+        .json({ message: "You can only delete your own videos" });
     }
 
     const publicId = getCloudinaryPublicId(video.videoUrl);
