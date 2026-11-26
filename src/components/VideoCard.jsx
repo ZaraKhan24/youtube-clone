@@ -52,6 +52,14 @@ function formatTimeAgo(dateInput) {
   return `${diffYears}y ago`;
 }
 
+function getCurrentUserFromStorage() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+}
+
 function VideoCard({ video, onSelectVideo, onDeleteVideo, onHideVideo }) {
   const [imgError, setImgError] = useState(false);
   const [autoDuration, setAutoDuration] = useState(video.duration || "");
@@ -64,6 +72,19 @@ function VideoCard({ video, onSelectVideo, onDeleteVideo, onHideVideo }) {
   const initialLetter = channelLabel.trim().charAt(0).toUpperCase() || "C";
   const playableSrc = video.videoUrl || video.url || "";
   const videoId = video._id || video.id;
+
+  const currentUser = getCurrentUserFromStorage();
+  const currentUserId = currentUser?._id || currentUser?.id;
+  const videoOwnerId =
+    video.uploadedBy?._id ||
+    video.uploadedBy ||
+    video.user?._id ||
+    video.user ||
+    video.userId;
+
+  const isOwner = Boolean(
+    currentUserId && videoOwnerId && String(currentUserId) === String(videoOwnerId)
+  );
 
   useEffect(() => {
     if (video.duration) {
@@ -128,7 +149,7 @@ function VideoCard({ video, onSelectVideo, onDeleteVideo, onHideVideo }) {
   };
 
   const handleDeleteClick = async () => {
-    if (!videoId || deleting) return;
+    if (!videoId || deleting || !isOwner) return;
     const confirmed = window.confirm(`Are you sure you want to delete "${video.title}"?`);
     if (!confirmed) return;
 
@@ -508,23 +529,32 @@ function VideoCard({ video, onSelectVideo, onDeleteVideo, onHideVideo }) {
                 <span>Report</span>
               </button>
 
-              <div style={{ height: "1px", backgroundColor: "#efefef", margin: "6px 0" }} />
-
-              <button
-                type="button"
-                disabled={deleting}
-                style={{
-                  ...optionStyle,
-                  color: "#c62828",
-                  fontWeight: 500,
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fdecea")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                onClick={handleDeleteClick}
-              >
-                <Trash2 size={18} color="#c62828" />
-                <span>{deleting ? "Deleting..." : "Delete"}</span>
-              </button>
+              {isOwner && (
+                <>
+                  <div
+                    style={{ height: "1px", backgroundColor: "#efefef", margin: "6px 0" }}
+                  />
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    style={{
+                      ...optionStyle,
+                      color: "#c62828",
+                      fontWeight: 500,
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#fdecea")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                    onClick={handleDeleteClick}
+                  >
+                    <Trash2 size={18} color="#c62828" />
+                    <span>{deleting ? "Deleting..." : "Delete"}</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
