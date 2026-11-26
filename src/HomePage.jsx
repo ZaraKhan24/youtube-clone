@@ -92,11 +92,15 @@ function HomePage() {
   // Delete video from backend (MongoDB + Cloudinary) and update UI
   const handleDeleteVideo = async (videoId) => {
     const token = localStorage.getItem("token");
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    if (!token) {
+      throw new Error("Please sign in first to delete your video");
+    }
 
     const res = await fetch(`${API_URL}/api/videos/${videoId}`, {
       method: "DELETE",
-      headers,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     const data = await parseResponseSafe(res);
