@@ -9,15 +9,32 @@ import {
   User,
   LogOut,
   LogIn,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-function Navbar({ onMenuClick, onOpenUploadModal }) {
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
+function Navbar({
+  onMenuClick,
+  onOpenUploadModal,
+  allVideos = [],
+  onSelectSuggestion,
+  onSearchQueryChange,
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const navigate = useNavigate();
   const navRef = useRef(null);
+  const searchBoxRef = useRef(null);
 
   const savedUser = JSON.parse(localStorage.getItem("user") || "null");
   const isLoggedIn = Boolean(localStorage.getItem("token") && savedUser);
@@ -25,9 +42,11 @@ function Navbar({ onMenuClick, onOpenUploadModal }) {
     ? savedUser.name.charAt(0).toUpperCase()
     : "Z";
 
-  // Close dropdowns when clicking outside navbar
   useEffect(() => {
     const handleClickOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
       if (navRef.current && !navRef.current.contains(e.target)) {
         setShowCreateMenu(false);
         setShowProfileMenu(false);
@@ -36,6 +55,53 @@ function Navbar({ onMenuClick, onOpenUploadModal }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    onSearchQueryChange?.(searchQuery);
+
+    if (!trimmed) {
+      setSuggestions(allVideos.slice(0, 6));
+      setLoadingSuggestions(false);
+      return;
+    }
+
+    setLoadingSuggestions(true);
+    const timer = setTimeout(async () => {
+      try {
+        const encoded = encodeURIComponent(trimmed);
+        const res = await fetch(`${API_URL}/api/videos?search=${encoded}`);
+        const data = await res.json().catch(() => []);
+
+        const sourceList =
+          Array.isArray(data) && data.length > 0 ? data : allVideos;
+        const lower = trimmed.toLowerCase();
+
+        const filtered = sourceList.filter((video) =>
+          (video.title || "").toLowerCase().includes(lower)
+        );
+
+        setSuggestions(filtered);
+      } catch {
+        const lower = trimmed.toLowerCase();
+        setSuggestions(
+          allVideos.filter((video) =>
+            (video.title || "").toLowerCase().includes(lower)
+          )
+        );
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, allVideos, onSearchQueryChange]);
+
+  const handleSuggestionClick = (video) => {
+    setSearchQuery(video.title || "");
+    setIsSearchFocused(false);
+    onSelectSuggestion?.(video);
+  };
 
   const handleUpload = () => {
     setShowCreateMenu(false);
@@ -65,6 +131,11 @@ function Navbar({ onMenuClick, onOpenUploadModal }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setIsSearchFocused(true);
   };
 
   const menuItemStyle = {
@@ -99,7 +170,11 @@ function Navbar({ onMenuClick, onOpenUploadModal }) {
         <div
           className="youtube-logo"
           style={{ cursor: "pointer" }}
-          onClick={() => navigate("/")}
+          onClick={() => {
+            setSearchQuery("");
+            setIsSearchFocused(false);
+            navigate("/");
+          }}
         >
           <div className="youtube-logo-icon">
             <span></span>
@@ -113,20 +188,173 @@ function Navbar({ onMenuClick, onOpenUploadModal }) {
 
       {/* Center Section - Search */}
       <div className="navbar-center">
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search"
-            className="search-input"
-          />
-
-          <button
-            type="button"
-            className="search-button"
-            aria-label="Search"
+        <div
+          ref={searchBoxRef}
+          style={{
+            position: "relative",
+            flex: 1,
+            maxWidth: "560px",
+          }}
+        >
+          <form
+            className="search-container"
+            onSubmit={handleSearchSubmit}
+            style={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}
           >
-            <Search size={24} />
-          </button>
+            <input
+              type="text"
+              placeholder="Search"
+              className="search-input"
+              value={searchQuery}
+              onFocus={() => {
+                setShowCreateMenu(false);
+                setShowProfileMenu(false);
+                setIsSearchFocused(true);
+              }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchFocused(true);
+              }}
+            />
+
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSuggestions(allVideos.slice(0, 6));
+                  setIsSearchFocused(true);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: "0 10px",
+                  height: "100%",
+                  color: "#606060",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                <X size={17} />
+              </button>
+            )}
+
+            <button
+              type="submit"
+              className="search-button"
+              aria-label="Search"
+            >
+              <Search size={22} />
+            </button>
+          </form>
+
+          {/* Compact YouTube-Style Dropdown */}
+          {isSearchFocused && (loadingSuggestions || suggestions.length > 0) && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                left: "2px",
+                right: "54px",
+                backgroundColor: "#ffffff",
+                border: "1px solid #e5e5e5",
+                borderRadius: "12px",
+                boxShadow: "0 6px 20px rgba(0, 0, 0, 0.12)",
+                zIndex: 1200,
+                padding: "6px 0",
+                maxHeight: "300px",
+                overflowY: "auto",
+              }}
+            >
+              {loadingSuggestions ? (
+                <div
+                  style={{
+                    padding: "9px 14px",
+                    fontSize: "13px",
+                    color: "#606060",
+                  }}
+                >
+                  Searching...
+                </div>
+              ) : (
+                suggestions.map((video) => (
+                  <button
+                    key={video._id || video.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSuggestionClick(video);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                      width: "100%",
+                      padding: "7px 14px",
+                      border: "none",
+                      backgroundColor: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      color: "#0f0f0f",
+                      fontSize: "13.5px",
+                      transition: "background-color 0.12s ease",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#f2f2f2")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                  >
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        minWidth: 0,
+                        flex: 1,
+                      }}
+                    >
+                      <Search
+                        size={14}
+                        color="#606060"
+                        style={{ flexShrink: 0 }}
+                      />
+                      <span
+                        style={{
+                          fontWeight: 500,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {video.title}
+                      </span>
+                    </span>
+
+                    {video.thumbnail && (
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        style={{
+                          width: "40px",
+                          height: "24px",
+                          objectFit: "cover",
+                          borderRadius: "4px",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         <button
@@ -148,6 +376,7 @@ function Navbar({ onMenuClick, onOpenUploadModal }) {
             onClick={() => {
               setShowCreateMenu((prev) => !prev);
               setShowProfileMenu(false);
+              setIsSearchFocused(false);
             }}
           >
             <Plus size={22} />
@@ -208,6 +437,7 @@ function Navbar({ onMenuClick, onOpenUploadModal }) {
               }
               setShowProfileMenu((prev) => !prev);
               setShowCreateMenu(false);
+              setIsSearchFocused(false);
             }}
             aria-label="Open profile or login menu"
             title={isLoggedIn ? savedUser.name : "Login / Create Account"}

@@ -7,6 +7,7 @@ import CategoryBar from "./components/CategoryBar";
 import VideoCard from "./components/VideoCard";
 import UploadModal from "./components/UploadModal";
 import VideoPlayerModal from "./components/VideoPlayerModal";
+import ChatBot from "./components/ChatBot";
 
 const API_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5000"
@@ -26,6 +27,7 @@ function HomePage() {
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -81,7 +83,6 @@ function HomePage() {
       throw new Error(data.message || "Upload failed");
     }
 
-    // Add newly uploaded video at the top of the homepage feed
     if (data.video) {
       setVideos((prev) => [data.video, ...prev]);
     } else {
@@ -114,12 +115,22 @@ function HomePage() {
     }
   };
 
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const visibleVideos = trimmedQuery
+    ? videos.filter((vid) =>
+        (vid.title || "").toLowerCase().includes(trimmedQuery)
+      )
+    : videos;
+
   return (
     <div className="homepage">
       {/* Top Navigation Bar */}
       <Navbar
         onMenuClick={handleMenuClick}
         onOpenUploadModal={() => setIsUploadOpen(true)}
+        allVideos={videos}
+        onSearchQueryChange={setSearchQuery}
+        onSelectSuggestion={(video) => setSelectedVideo(video)}
       />
 
       <div className="homepage-body">
@@ -141,8 +152,12 @@ function HomePage() {
               <p style={{ padding: "20px" }}>
                 No videos yet. Click <strong>Create → Upload video</strong> to upload the first video!
               </p>
+            ) : visibleVideos.length === 0 ? (
+              <p style={{ padding: "20px" }}>
+                No videos found for &ldquo;{searchQuery}&rdquo;.
+              </p>
             ) : (
-              videos.map((video, index) => (
+              visibleVideos.map((video, index) => (
                 <VideoCard
                   key={video._id || video.id || index}
                   video={video}
@@ -172,6 +187,9 @@ function HomePage() {
         video={selectedVideo}
         onClose={() => setSelectedVideo(null)}
       />
+
+      {/* AI Chatbot Widget */}
+      <ChatBot />
     </div>
   );
 }

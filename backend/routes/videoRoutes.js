@@ -65,6 +65,18 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+router.get("/", async (req, res) => {
+  try {
+    const search = (req.query.search || "").trim();
+    const filter = search
+      ? { title: { $regex: search, $options: "i" } }
+      : {};
+    const videos = await Video.find(filter).sort({ createdAt: -1 });
+    res.json(videos);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // POST upload new video (authenticated user only)
 router.post("/", authenticateToken, upload.single("video"), async (req, res) => {
